@@ -26,7 +26,7 @@ vgsales %>%
   labs(title = 'Average Global Sales by Platform',
        x = 'Platform',
        y = 'Average Global Sales (Millions)') + 
-  theme(legend.position = 'none') %>%
+  theme(legend.position = 'none') +
   ggsave('Figures/avg_sales_platform.png')
 
 # bar plot of the average number of sales by region
@@ -40,7 +40,7 @@ vgsales %>%
   labs(title = 'Average Sales by Region',
        x = 'Region',
        y = 'Average Sales (Millions)') + 
-  theme(legend.position = 'none') %>%
+  theme(legend.position = 'none') +
   ggsave('Figures/avg_sales_region.png')
 
 # bar plot of average critic and user score by platform among those that have scores
@@ -56,7 +56,7 @@ vgsales %>%
   labs(title = 'Average Critic and User Score by Platform',
        x = 'Platform',
        y = 'Average Score') + 
-  theme(legend.position = 'top') %>%
+  theme(legend.position = 'top') +
   ggsave('Figures/avg_scores_platform.png')
 
 # line plot of total global sales by year up to 2016
@@ -68,7 +68,7 @@ vgsales %>%
   geom_line() +
   labs(title = 'Total Global Sales by Year',
        x = 'Year',
-       y = 'Total Global Sales (Millions)') %>%
+       y = 'Total Global Sales (Millions)') +
   ggsave('Figures/total_sales_year.png')
 
 # dummy variable of having a critic and user score
