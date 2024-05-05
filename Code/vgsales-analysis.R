@@ -2,19 +2,29 @@
 
 # load necessary packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(estimatr, tidyverse, foreach, doRNG, doSNOW, parallel, boot, targeted, ggplot2)
+pacman::p_load(estimatr, tidyverse, foreach, doRNG, doSNOW, parallel, boot, targeted, ggplot2, xtable)
 
 # load data
 vgsales <- read.csv('Data/vgsales-12-2016.csv')
-
-# summary stats
-summary(vgsales)
 
 # rescale user score by 10
 vgsales$User_Score <- vgsales$User_Score * 10
 
 # convert Year_of_Release as numeric
 vgsales$Year_of_Release <- as.numeric(vgsales$Year_of_Release)
+
+# filter games only up to 2016
+vgsales <- vgsales %>% filter(Year_of_Release <= 2016)
+
+# remove outliers
+vgsales <- vgsales %>% filter(Global_Sales < 40)
+
+# summary stats selecting numeric cols
+summary_vg <- vgsales %>% 
+  select_if(is.numeric) %>% 
+  summary()
+# convert to latex
+xtable(summary_vg)
 
 # figure showing the average number of sales by platform
 vgsales %>% 
@@ -61,7 +71,6 @@ vgsales %>%
 
 # line plot of total global sales by year up to 2016
 vgsales %>% 
-  filter(Year_of_Release <= 2016) %>% 
   group_by(Year_of_Release) %>% 
   summarise(total_sales = sum(Global_Sales)) %>% 
   ggplot(aes(x = Year_of_Release, y = total_sales)) +
@@ -70,6 +79,24 @@ vgsales %>%
        x = 'Year',
        y = 'Total Global Sales (Millions)') +
   ggsave('Figures/total_sales_year.png')
+
+# scatter plot of global sales by critic score
+vgsales %>% 
+  ggplot(aes(x = Critic_Score, y = Global_Sales)) +
+  geom_point() +
+  labs(title = 'Global Sales by Critic Score',
+       x = 'Critic Score',
+       y = 'Global Sales (Millions)') +
+  ggsave('Figures/sales_critic_score.png')
+
+# scatter plot of global sales by user score
+vgsales %>% 
+  ggplot(aes(x = User_Score, y = Global_Sales)) +
+  geom_point() +
+  labs(title = 'Global Sales by User Score',
+       x = 'User Score',
+       y = 'Global Sales (Millions)') +
+  ggsave('Figures/sales_user_score.png')
 
 # dummy variable of having a critic and user score
 vgsales$has_critic_score <- ifelse(is.na(vgsales$Critic_Score), 0, 1)
