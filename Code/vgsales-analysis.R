@@ -5,7 +5,7 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(estimatr, tidyverse, foreach, doRNG, doSNOW, parallel, boot, targeted, ggplot2)
 
 # load data
-vgsales <- read.csv('vgsales-12-2016.csv')
+vgsales <- read.csv('Data/vgsales-12-2016.csv')
 
 # summary stats
 summary(vgsales)
@@ -26,9 +26,10 @@ vgsales %>%
   labs(title = 'Average Global Sales by Platform',
        x = 'Platform',
        y = 'Average Global Sales (Millions)') + 
-  theme(legend.position = 'none')
+  theme(legend.position = 'none') %>%
+  ggsave('Figures/avg_sales_platform.png')
 
-# colored bar plot of the average number of sales by region
+# bar plot of the average number of sales by region
 vgsales %>% 
   gather(key = 'region', value = 'sales', NA_Sales:Other_Sales) %>% 
   group_by(region) %>% 
@@ -39,10 +40,12 @@ vgsales %>%
   labs(title = 'Average Sales by Region',
        x = 'Region',
        y = 'Average Sales (Millions)') + 
-  theme(legend.position = 'none')
+  theme(legend.position = 'none') %>%
+  ggsave('Figures/avg_sales_region.png')
 
-# average critic and user score by platform
+# bar plot of average critic and user score by platform among those that have scores
 vgsales %>% 
+  filter(!is.na(Critic_Score) & !is.na(User_Score)) %>% 
   group_by(Platform) %>% 
   summarise(mean_critic_score = mean(Critic_Score),
             mean_user_score = mean(User_Score)) %>% 
@@ -50,10 +53,11 @@ vgsales %>%
   ggplot(aes(x = reorder(Platform, score), y = score, fill = score_type)) +
   geom_bar(stat = 'identity', position = 'dodge') +
   coord_flip() +
-  labs(title = 'Average Critic and User Scores by Platform',
+  labs(title = 'Average Critic and User Score by Platform',
        x = 'Platform',
        y = 'Average Score') + 
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'top') %>%
+  ggsave('Figures/avg_scores_platform.png')
 
 # line plot of total global sales by year up to 2016
 vgsales %>% 
@@ -64,7 +68,8 @@ vgsales %>%
   geom_line() +
   labs(title = 'Total Global Sales by Year',
        x = 'Year',
-       y = 'Total Global Sales (Millions)')
+       y = 'Total Global Sales (Millions)') %>%
+  ggsave('Figures/total_sales_year.png')
 
 # dummy variable of having a critic and user score
 vgsales$has_critic_score <- ifelse(is.na(vgsales$Critic_Score), 0, 1)
@@ -72,15 +77,23 @@ vgsales$has_user_score <- ifelse(is.na(vgsales$User_Score), 0, 1)
 
 # linear regression model
 linreg <- function(data_in) {
-  model <- estimatr::lm_robust(Global_Sales ~ Critic_Score + User_Score, data = data_in)
+  model <- estimatr::lm_robust(Global_Sales ~ Critic_Score + User_Score + Year_of_Release, data = data_in)
   
   ate_hat <- model$coef['Critic_Score']
   
   return(ate_hat %>% as.numeric())
 }
 
-# results from linreg model 
+# summary of the linreg model
+linreg_model <- estimatr::lm_robust(Global_Sales ~ Critic_Score + User_Score + Year_of_Release, data = vgsales)
+summary(linreg_model)
+
+# estimated ate from linreg model 
 linreg(vgsales)
+
+# model for interactions between user score and year of release
+linreg_int <- estimatr::lm_robust(Global_Sales ~ Critic_Score + User_Score + Year_of_Release + User_Score:Year_of_Release, data = vgsales)
+summary(linreg_int)
 
 # function to take the estimated ATE difference
 ate_diff <- function(data_in) {
@@ -95,21 +108,3 @@ ate_diff <- function(data_in) {
 
 # results for the ate_diff function
 ate_diff(vgsales)
-
-# function for estimating ate using regression adjustment
-linreg_adjust <- function(data_in) {
-  model <- estimatr::lm_robust(Global_Sales ~ Critic_Score + User_Score, data = data_in)
-  
-  y1_hat <- predict(model, newdata = data_in %>% filter(has_critic_score == 1))
-  y0_hat <- predict(model, newdata = data_in %>% filter(has_critic_score == 0))
-  
-  if (length(y1_hat) != length(y0_hat)) {
-    stop("Lengths of y1_hat and y0_hat are not the same.")
-  }
-  ate_hat <- as.numeric(mean(y1_hat - y0_hat))
-  
-  return(ate_hat)
-}
-
-# results from linreg_target model
-linreg_adjust(vgsales)
