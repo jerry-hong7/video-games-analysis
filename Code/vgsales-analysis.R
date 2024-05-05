@@ -1,4 +1,4 @@
-# name: Jerry Hong
+# name: Jerry Hong, Thomas Joyce, and Hayden Truong
 
 # load necessary packages
 if (!require("pacman")) install.packages("pacman")
